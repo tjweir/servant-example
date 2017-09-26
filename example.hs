@@ -36,6 +36,10 @@ import qualified Text.Blaze.Html
 
 -- API endpoints
 type UserAPI1 = "users" :> Get '[JSON] [User]
+type UserAPI2 = "users" :> Get '[JSON] [User]
+  :<|> "albert" :> Get '[JSON] User
+  :<|> "isaac"  :> Get '[JSON] User
+
 
 -- we are going to return this
 data User = User
@@ -47,6 +51,8 @@ data User = User
 
 instance ToJSON User
 
+
+
 -- data
 users1 :: [User]
 users1 =
@@ -54,18 +60,39 @@ users1 =
   , User "Albert Einstein" 136 "ae@mc2.org"         (fromGregorian 1905 12 1)
   ]
 
+isaac :: User
+isaac = User "Isaac" 372 "i@newton.co.uk" (fromGregorian 1683  3 1)
+
+albert :: User
+albert = User "albert" 136 "a@einstein.co.uk" (fromGregorian 1683  3 1)
+
+users2 :: [User]
+users2 = [isaac, albert]
+
+
+
 -- type of a server
 server1 :: Server UserAPI1
 server1 = return users1
 
-userAPI :: Proxy UserAPI1
-userAPI = Proxy
+server2 :: Server UserAPI2
+server2 = return users2
+ :<|> return albert
+ :<|> return isaac
 
+userAPI1 :: Proxy UserAPI1
+userAPI1 = Proxy
+
+userAPI2 :: Proxy UserAPI2
+userAPI2 = Proxy
 -- 'serve' comes from servant and hands you a WAI Application,
 -- which you can think of as an "abstract" web application,
 -- not yet a webserver.
 app1 :: Application
-app1 = serve userAPI server1
+app1 = serve userAPI1 server1
+
+app2 :: Application
+app2 = serve userAPI2 server2
 
 main :: IO ()
-main = run 8081 app1
+main = run 8081 app2
