@@ -40,6 +40,13 @@ type UserAPI2 = "users" :> Get '[JSON] [User]
   :<|> "albert" :> Get '[JSON] User
   :<|> "isaac"  :> Get '[JSON] User
 
+type CourseAPI = "courses" :> Get '[JSON] [Course]
+
+type API3 = "users"   :> Get '[JSON] [User]
+       :<|> "albert"  :> Get '[JSON] User
+       :<|> "isaac"   :> Get '[JSON] User
+       :<|> "courses" :> Get '[JSON] [Course]
+
 
 -- we are going to return this
 data User = User
@@ -49,8 +56,17 @@ data User = User
   , registration_date :: Day
   } deriving (Eq, Show, Generic)
 
+-- what?
 instance ToJSON User
 
+data Course = Course {
+    cname :: String
+  , mark :: Int
+  , start_date :: Day
+  , end_date   :: Day
+} deriving (Eq, Show, Generic)
+
+instance ToJSON Course
 
 
 -- data
@@ -69,6 +85,11 @@ albert = User "albert" 136 "a@einstein.co.uk" (fromGregorian 1683  3 1)
 users2 :: [User]
 users2 = [isaac, albert]
 
+cfp1Level1Ins :: Course
+cfp1Level1Ins = Course "CFP 1 - Insurance" 99 (fromGregorian 2017 1 1) (fromGregorian 2017 2 1)
+
+courses :: [Course]
+courses = [cfp1Level1Ins]
 
 
 -- type of a server
@@ -80,11 +101,20 @@ server2 = return users2
  :<|> return albert
  :<|> return isaac
 
+server3 :: Server API3
+server3 = return users2
+ :<|> return albert
+ :<|> return isaac
+ :<|> return courses
+
 userAPI1 :: Proxy UserAPI1
 userAPI1 = Proxy
 
 userAPI2 :: Proxy UserAPI2
 userAPI2 = Proxy
+
+api3 :: Proxy API3
+api3 = Proxy
 -- 'serve' comes from servant and hands you a WAI Application,
 -- which you can think of as an "abstract" web application,
 -- not yet a webserver.
@@ -94,5 +124,8 @@ app1 = serve userAPI1 server1
 app2 :: Application
 app2 = serve userAPI2 server2
 
+app3 :: Application
+app3 = serve api3 server3
+
 main :: IO ()
-main = run 8081 app2
+main = run 8081 app3
