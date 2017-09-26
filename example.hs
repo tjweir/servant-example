@@ -1,52 +1,71 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Main where
 
-import Control.Monad.Trans.Either (EitherT)
-import Network.Wai (Application)
-import Network.Wai.Handler.Warp (run)
-import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import Prelude ()
+import Prelude.Compat
+
+import Control.Monad.Except
+import Control.Monad.Reader
+--import Data.Aeson.Compat
+import Data.Aeson.Types
+import Data.Attoparsec.ByteString
+import Data.ByteString (ByteString)
+import Data.List
+import Data.Maybe
+import Data.String.Conversions
+import Data.Time.Calendar
+import GHC.Generics
+--import Lucid
+import Network.HTTP.Media ((//), (/:))
+import Network.Wai
+import Network.Wai.Handler.Warp
 import Servant
-    ( (:>), (:<|>)((:<|>)), Get, JSON, Proxy(..), ServantErr, ServerT, serve )
+import System.Directory
+import Text.Blaze
+import Text.Blaze.Html.Renderer.Utf8
+import qualified Data.Aeson.Parser
+import qualified Text.Blaze.Html
 
--- | A representation of our REST API at the type level.
---
--- This defines two routes:
---   * /dogs -- Responds to HTTP GET with a list of integers in JSON format.
---   * /cats -- Responds to HTTP GET with a list of Strings in JSON format.
-type MyAPI = "dogs" :> Get '[JSON] [Int]
-        :<|> "cats" :> Get '[JSON] [String]
+-- API endpoints
+type UserAPI1 = "users" :> Get '[JSON] [User]
 
--- | A Warp 'Application' that will serve our API.
-app :: Application
-app = serve (Proxy :: Proxy MyAPI) myAPI
+-- we are going to return this
+data User = User
+  { name :: String
+  , age :: Int
+  , email :: String
+  , registration_date :: Day
+  } deriving (Eq, Show, Generic)
 
--- | Our entire API.  You can see that it is a combination of the 'dogNums'
--- handler and the 'cats' handler.
+instance ToJSON User
 
--- One way of writing the type.
--- myAPI :: EitherT ServantErr IO [Int]
---     :<|> EitherT ServantErr IO [String]
---
--- Another way of writing the type.
--- myAPI :: ServerT (Get '[JSON] [Int]) (EitherT ServantErr IO)
---     :<|> ServerT (Get '[JSON] [String]) (EitherT ServantErr IO)
---
--- The shortest way of writing the type.
-myAPI :: ServerT MyAPI (EitherT ServantErr IO)
-myAPI = dogNums :<|> cats
+-- data
+users1 :: [User]
+users1 =
+  [ User "Isaac Newton"    372 "isaac@newton.co.uk" (fromGregorian 1683  3 1)
+  , User "Albert Einstein" 136 "ae@mc2.org"         (fromGregorian 1905 12 1)
+  ]
 
--- | A handler for the @/dogs@ route.  It just returns a list of the integers
--- one to four.
-dogNums :: EitherT ServantErr IO [Int]
-dogNums = return [1,2,3,4]
+-- type of a server
+server1 :: Server UserAPI1
+server1 = return users1
 
--- | A handler for the @/cats@ route.
-cats :: EitherT ServantErr IO [String]
-cats = return ["long-haired", "short-haired"]
+userAPI :: Proxy UserAPI1
+userAPI = Proxy
 
--- | Run our 'app' as a Warp 'Application'.
+-- 'serve' comes from servant and hands you a WAI Application,
+-- which you can think of as an "abstract" web application,
+-- not yet a webserver.
+app1 :: Application
+app1 = serve userAPI server1
+
 main :: IO ()
-main = run 32323 $ logStdoutDev app
-
+main = run 8081 app1
